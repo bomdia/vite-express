@@ -5,6 +5,8 @@ import fetch from "node-fetch";
 import path from "path";
 import pc from "picocolors";
 import Vite from "vite";
+import http from 'http'
+import https from 'https'
 
 const { NODE_ENV } = process.env;
 
@@ -120,10 +122,40 @@ function listen(app: core.Express, port: number, callback?: () => void) {
   return server;
 }
 
+function bind(  
+  app: Express,
+  callback?: () => void,
+  host?:string,
+  httpPort?: number,
+  httpServer?: http.Server,
+  httpsPort?: number,
+  httpsServer?: https.Server,
+)  {
+  const haveServers = httpServer || httpsServer
+  const realHttpPort = httpPort || 8080
+  const realHttpsPort = httpsPort || 8443
+  const realHost = host || '0.0.0.0'
+  let devServer: Vite.ViteDevServer | undefined;
+  const listener = async () => {
+    if (Config.mode === "development" && !devServer) devServer = await startDevServer();
+    await serveStatic(app);
+    await serveHTML(app);
+    callback?.();
+  }
+  const closer = () => devServer?.close()
+  
+  if (haveServers) {
+    if (httpServer) httpServer.listen(httpPort, host, listener).on('close',closer)
+    if (httpsServer) httpsServer.listen(httpsPort, host, listener).on('close',closer)
+  } else {
+    app.listen(httpPort, host, listener).on('close',closer)
+  }
+}
+
 async function build() {
   info("Build starting...");
   await Vite.build();
   info("Build completed!");
 }
 
-export default { config, listen, build };
+export default { config, listen, build, bind };
