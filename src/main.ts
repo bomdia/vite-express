@@ -123,7 +123,7 @@ function listen(app: core.Express, port: number, callback?: () => void) {
 }
 
 function bind(  
-  app: Express,
+  app: core.Express,
   callback?: () => void,
   host?:string,
   httpPort?: number,
@@ -145,10 +145,10 @@ function bind(
   const closer = () => devServer?.close()
   
   if (haveServers) {
-    if (httpServer) httpServer.listen(httpPort, host, listener).on('close',closer)
-    if (httpsServer) httpsServer.listen(httpsPort, host, listener).on('close',closer)
+    if (httpServer) httpServer.listen(realHttpPort, realHost, listener).on('close',closer)
+    if (httpsServer) httpsServer.listen(realHttpsPort, realHost, listener).on('close',closer)
   } else {
-    app.listen(httpPort, host, listener).on('close',closer)
+    app.listen(realHttpPort, realHost, listener).on('close',closer)
   }
 }
 
