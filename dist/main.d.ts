@@ -11,6 +11,7 @@ declare function config(config: Partial<typeof Config>): void;
 declare function listen(
   app: core.Express,
   port: number,
+  host?: string,
   callback?: () => void
 ): http.Server<typeof http.IncomingMessage, typeof http.ServerResponse>;
 declare function bind(

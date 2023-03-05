@@ -59,8 +59,8 @@ const Config = {
   mode: NODE_ENV === "production" ? "production" : "development",
   vitePort: 5173,
 };
-function getViteHost() {
-  return `http://localhost:${Config.vitePort}`;
+function getViteHost(host) {
+  return `http://${host}:${Config.vitePort}`;
 }
 function info(msg) {
   const timestamp = new Date().toLocaleString("en-US").split(",")[1].trim();
@@ -73,7 +73,7 @@ function info(msg) {
 function isStaticFilePath(path) {
   return path.match(/\.\w+$/);
 }
-function serveStatic(app) {
+function serveStatic(app, host) {
   return __awaiter(this, void 0, void 0, function* () {
     info(`Running in ${pc.yellow(Config.mode)} mode`);
     if (Config.mode === "production") {
@@ -87,7 +87,7 @@ function serveStatic(app) {
     } else {
       app.use((req, res, next) => {
         if (isStaticFilePath(req.path)) {
-          fetch(`${getViteHost()}${req.path}`).then((response) => {
+          fetch(`${getViteHost(host)}${req.path}`).then((response) => {
             if (!response.ok) return next();
             res.redirect(response.url);
           });
@@ -102,17 +102,17 @@ function serveStatic(app) {
     ];
   });
 }
-function startDevServer() {
+function startDevServer(host) {
   return __awaiter(this, void 0, void 0, function* () {
     const server = yield Vite.createServer({
       clearScreen: false,
-      server: { port: Config.vitePort },
+      server: { port: Config.vitePort, host },
     }).then((server) => server.listen());
-    info(`Vite is listening ${pc.gray(getViteHost())}`);
+    info(`Vite is listening ${pc.gray(getViteHost(host))}`);
     return server;
   });
 }
-function serveHTML(app) {
+function serveHTML(app, host) {
   return __awaiter(this, void 0, void 0, function* () {
     if (Config.mode === "production") {
       const config = yield Vite.resolveConfig({}, "build");
@@ -124,12 +124,12 @@ function serveHTML(app) {
       app.get("/*", (req, res, next) =>
         __awaiter(this, void 0, void 0, function* () {
           if (isStaticFilePath(req.path)) return next();
-          fetch(getViteHost())
+          fetch(getViteHost(host))
             .then((res) => res.text())
             .then((content) =>
               content.replace(
                 /(\/@react-refresh|\/@vite\/client)/g,
-                `${getViteHost()}$1`
+                `${getViteHost(host)}$1`
               )
             )
             .then((content) =>
@@ -144,13 +144,15 @@ function config(config) {
   if (config.mode) Config.mode = config.mode;
   if (config.vitePort) Config.vitePort = config.vitePort;
 }
-function listen(app, port, callback) {
+function listen(app, port, host, callback) {
   let devServer;
+  const realHost = host || "0.0.0.0";
   const server = app.listen(port, () =>
     __awaiter(this, void 0, void 0, function* () {
-      if (Config.mode === "development") devServer = yield startDevServer();
-      yield serveStatic(app);
-      yield serveHTML(app);
+      if (Config.mode === "development")
+        devServer = yield startDevServer(realHost);
+      yield serveStatic(app, realHost);
+      yield serveHTML(app, realHost);
       callback === null || callback === void 0 ? void 0 : callback();
     })
   );
@@ -176,9 +178,9 @@ function bind(
   const listener = () =>
     __awaiter(this, void 0, void 0, function* () {
       if (Config.mode === "development" && !devServer)
-        devServer = yield startDevServer();
-      yield serveStatic(app);
-      yield serveHTML(app);
+        devServer = yield startDevServer(realHost);
+      yield serveStatic(app, realHost);
+      yield serveHTML(app, realHost);
       callback === null || callback === void 0 ? void 0 : callback();
     });
   const closer = () =>
